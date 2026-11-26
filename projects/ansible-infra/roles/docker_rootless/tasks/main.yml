@@ -1,0 +1,73 @@
+---
+- name: Add Docker CE repository
+  ansible.builtin.get_url:
+    url: "{{ docker_rootless_repo_url }}"
+    dest: /etc/yum.repos.d/docker-ce.repo
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Install Docker packages
+  ansible.builtin.dnf:
+    name: "{{ docker_rootless_packages }}"
+    state: present
+
+- name: Disable the rootful Docker daemon
+  ansible.builtin.systemd_service:
+    name: "{{ item }}"
+    state: stopped
+    enabled: false
+  loop:
+    - docker.service
+    - docker.socket
+
+- name: Create the service user
+  ansible.builtin.user:
+    name: "{{ docker_rootless_user }}"
+    shell: /bin/bash
+    create_home: true
+  register: docker_rootless_user_info
+
+- name: Store the service user UID
+  ansible.builtin.set_fact:
+    docker_rootless_uid: "{{ docker_rootless_user_info.uid }}"
+
+- name: Enable lingering so user services survive logout
+  ansible.builtin.command: "loginctl enable-linger {{ docker_rootless_user }}"
+  args:
+    creates: "/var/lib/systemd/linger/{{ docker_rootless_user }}"
+
+- name: Wait for the user runtime directory
+  ansible.builtin.wait_for:
+    path: "/run/user/{{ docker_rootless_uid }}"
+    timeout: 30
+
+- name: Install rootless Docker for the service user
+  ansible.builtin.command: dockerd-rootless-setuptool.sh install
+  args:
+    creates: "/home/{{ docker_rootless_user }}/.config/systemd/user/docker.service"
+  become: true
+  become_user: "{{ docker_rootless_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ docker_rootless_uid }}"
+    DBUS_SESSION_BUS_ADDRESS: "unix:path=/run/user/{{ docker_rootless_uid }}/bus"
+
+- name: Enable and start the rootless Docker service
+  ansible.builtin.systemd_service:
+    name: docker
+    scope: user
+    enabled: true
+    state: started
+  become: true
+  become_user: "{{ docker_rootless_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ docker_rootless_uid }}"
+
+- name: Export DOCKER_HOST for the service user
+  ansible.builtin.lineinfile:
+    path: "/home/{{ docker_rootless_user }}/.bashrc"
+    line: "export DOCKER_HOST=unix:///run/user/{{ docker_rootless_uid }}/docker.sock"
+    owner: "{{ docker_rootless_user }}"
+    group: "{{ docker_rootless_user }}"
+    mode: "0644"
+    create: true

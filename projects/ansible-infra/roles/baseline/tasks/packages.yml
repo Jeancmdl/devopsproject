@@ -1,0 +1,26 @@
+---
+- name: Install baseline packages
+  ansible.builtin.dnf:
+    name: "{{ baseline_packages }}"
+    state: present
+
+- name: Apply all updates
+  ansible.builtin.dnf:
+    name: "*"
+    state: latest # noqa package-latest
+    update_only: true
+  when: baseline_update_mode == 'all'
+
+- name: Apply security updates only
+  ansible.builtin.dnf:
+    name: "*"
+    state: latest # noqa package-latest
+    security: true
+    update_only: true
+  when: baseline_update_mode == 'security'
+
+- name: Ensure chronyd is running
+  ansible.builtin.service:
+    name: chronyd
+    state: started
+    enabled: true

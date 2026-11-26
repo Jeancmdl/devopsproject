@@ -1,0 +1,11 @@
+---
+# Copy this file to vars/<client>.yml to onboard a new client.
+# Secrets (registry token, DB password) must come from Semaphore secrets
+# or Ansible Vault, never from this file.
+app_name: demo-client
+app_repo_url: "https://gitlab.com/jl-platform-lab/demo-app.git"
+app_version: "v1.0.0"
+app_env:
+  APP_ENV: production
+  APP_PORT: "8080"
+  TZ: America/Sao_Paulo

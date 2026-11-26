@@ -1,0 +1,7 @@
+---
+- name: Provision a new server (hardened baseline + rootless Docker)
+  hosts: all
+  become: true
+  roles:
+    - role: baseline
+    - role: docker_rootless

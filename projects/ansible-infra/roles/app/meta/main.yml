@@ -1,0 +1,11 @@
+---
+galaxy_info:
+  role_name: app
+  author: Jean Lima
+  description: Deploy a Docker Compose application as an unprivileged user
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: EL
+      versions: ["8", "9"]
+dependencies: []

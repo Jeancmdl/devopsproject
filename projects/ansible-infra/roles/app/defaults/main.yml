@@ -1,0 +1,13 @@
+---
+app_user: "{{ docker_rootless_user | default('app') }}"
+app_name: demo
+app_repo_url: ""
+app_version: main
+app_env: {}
+app_base_dir: "/home/{{ app_user }}/apps"
+
+# Registry login is skipped when the token is empty.
+# Provide these from Semaphore secrets or Ansible Vault.
+app_registry: docker.io
+app_registry_user: ""
+app_registry_token: ""

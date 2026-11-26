@@ -1,0 +1,62 @@
+---
+# Semaphore UI + PostgreSQL. Works with `docker compose` (rootless) and `podman compose`.
+name: semaphore
+
+services:
+  postgres:
+    image: docker.io/library/postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
+    volumes:
+      # PostgreSQL 18 images expect the volume at /var/lib/postgresql
+      - semaphore-db:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    security_opt:
+      - no-new-privileges:true
+    networks: [backend]
+
+  semaphore:
+    image: docker.io/semaphoreui/semaphore:${SEMAPHORE_TAG}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      # Bound to localhost only. Publish through a TLS reverse proxy (NGINX).
+      - "127.0.0.1:${SEMAPHORE_PORT:-3000}:3000"
+    environment:
+      SEMAPHORE_DB_DIALECT: postgres
+      SEMAPHORE_DB_HOST: postgres
+      SEMAPHORE_DB_PORT: "5432"
+      SEMAPHORE_DB_USER: ${POSTGRES_USER}
+      SEMAPHORE_DB_PASS: ${POSTGRES_PASSWORD}
+      SEMAPHORE_DB: ${POSTGRES_DB}
+      SEMAPHORE_PLAYBOOK_PATH: /tmp/semaphore/
+      SEMAPHORE_ADMIN: ${SEMAPHORE_ADMIN}
+      SEMAPHORE_ADMIN_NAME: ${SEMAPHORE_ADMIN_NAME}
+      SEMAPHORE_ADMIN_EMAIL: ${SEMAPHORE_ADMIN_EMAIL}
+      SEMAPHORE_ADMIN_PASSWORD: ${SEMAPHORE_ADMIN_PASSWORD}
+      SEMAPHORE_ACCESS_KEY_ENCRYPTION: ${SEMAPHORE_ACCESS_KEY_ENCRYPTION}
+      TZ: ${TZ:-UTC}
+    volumes:
+      - semaphore-config:/etc/semaphore
+      - semaphore-data:/var/lib/semaphore
+    security_opt:
+      - no-new-privileges:true
+    networks: [backend]
+
+volumes:
+  semaphore-db:
+  semaphore-config:
+  semaphore-data:
+
+networks:
+  backend:

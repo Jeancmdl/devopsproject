@@ -1,0 +1,34 @@
+---
+# Remediates CVE-2021-4034 (PwnKit, polkit pkexec local privilege escalation)
+# and prints a per-host compliance report.
+- name: Patch CVE-2021-4034 (PwnKit)
+  hosts: all
+  become: true
+  tasks:
+    - name: Update polkit to the latest available version
+      ansible.builtin.dnf:
+        name: polkit
+        state: latest # noqa package-latest
+        update_only: true
+
+    - name: Gather package facts
+      ansible.builtin.package_facts:
+        manager: rpm
+
+    - name: Record polkit version
+      ansible.builtin.set_fact:
+        pwnkit_polkit_version: >-
+          {{ ansible_facts.packages['polkit'][0].version }}-{{ ansible_facts.packages['polkit'][0].release }}
+
+- name: Compliance report
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Print report
+      ansible.builtin.debug:
+        msg: |
+          CVE-2021-4034 remediation report
+          {% for host in ansible_play_hosts_all %}
+          - {{ host }}: polkit {{ hostvars[host].pwnkit_polkit_version | default('UNREACHABLE/FAILED') }}
+          {% endfor %}
+      run_once: true

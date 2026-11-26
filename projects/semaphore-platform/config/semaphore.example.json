@@ -1,0 +1,63 @@
+{
+  "url": "http://127.0.0.1:3000",
+  "project": "infrastructure",
+  "ssh_key": {
+    "name": "ansible-ssh",
+    "login": "ansible",
+    "private_key_file": "~/.ssh/semaphore_ed25519"
+  },
+  "repository": {
+    "name": "ansible-infra",
+    "git_url": "https://github.com/Jeancmdl/devopsproject.git",
+    "git_branch": "main"
+  },
+  "environment": {
+    "name": "default",
+    "extra_vars": {},
+    "env": {
+      "ANSIBLE_CONFIG": "projects/ansible-infra/ansible.cfg",
+      "ANSIBLE_ROLES_PATH": "projects/ansible-infra/roles"
+    }
+  },
+  "inventories": [
+    {
+      "name": "lab",
+      "type": "file",
+      "inventory": "projects/ansible-infra/inventories/lab/hosts.yml"
+    }
+  ],
+  "templates": [
+    {
+      "name": "Provision server",
+      "playbook": "projects/ansible-infra/playbooks/provision.yml",
+      "inventory": "lab",
+      "description": "Hardened baseline + rootless Docker"
+    },
+    {
+      "name": "Provision server (dry run)",
+      "playbook": "projects/ansible-infra/playbooks/provision.yml",
+      "inventory": "lab",
+      "arguments": [
+        "--check",
+        "--diff"
+      ],
+      "description": "Always run this before applying"
+    },
+    {
+      "name": "Onboard client",
+      "playbook": "projects/ansible-infra/playbooks/onboard_client.yml",
+      "inventory": "lab",
+      "arguments": [
+        "-e",
+        "client_file=vars/client.example.yml"
+      ],
+      "description": "Deploy a client app from vars/<client>.yml"
+    },
+    {
+      "name": "Patch CVE-2021-4034",
+      "playbook": "projects/ansible-infra/playbooks/patch_pwnkit.yml",
+      "inventory": "lab",
+      "description": "PwnKit remediation with compliance report"
+    }
+  ]
+}

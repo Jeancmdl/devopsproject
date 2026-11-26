@@ -1,0 +1,32 @@
+---
+- name: Create users
+  ansible.builtin.user:
+    name: "{{ item.name }}"
+    groups: "{{ 'wheel' if item.sudo_nopasswd | default(false) else omit }}"
+    append: true
+    shell: /bin/bash
+    state: "{{ item.state | default('present') }}"
+  loop: "{{ baseline_users }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Install authorized keys (exclusive)
+  ansible.posix.authorized_key:
+    user: "{{ item.name }}"
+    key: "{{ item.ssh_keys | join('\n') }}"
+    exclusive: true
+  loop: "{{ baseline_users | selectattr('ssh_keys', 'defined') | rejectattr('state', 'eq', 'absent') | list }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Configure passwordless sudo
+  ansible.builtin.copy:
+    dest: "/etc/sudoers.d/90-{{ item.name }}"
+    content: "{{ item.name }} ALL=(ALL) NOPASSWD: ALL\n"
+    owner: root
+    group: root
+    mode: "0440"
+    validate: /usr/sbin/visudo -cf %s
+  loop: "{{ baseline_users | selectattr('sudo_nopasswd', 'defined') | selectattr('sudo_nopasswd') | list }}"
+  loop_control:
+    label: "{{ item.name }}"

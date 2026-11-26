@@ -1,0 +1,52 @@
+---
+- name: Validate required variables
+  ansible.builtin.assert:
+    that:
+      - app_repo_url | length > 0
+      - app_name | length > 0
+    fail_msg: "app_repo_url and app_name are required."
+
+- name: Look up the application user
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ app_user }}"
+
+- name: Set runtime facts
+  ansible.builtin.set_fact:
+    app_uid: "{{ ansible_facts.getent_passwd[app_user][1] }}"
+    app_dir: "{{ app_base_dir }}/{{ app_name }}"
+
+- name: Deploy as the application user
+  become: true
+  become_user: "{{ app_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ app_uid }}"
+    DOCKER_HOST: "unix:///run/user/{{ app_uid }}/docker.sock"
+  block:
+    - name: Clone application repository
+      ansible.builtin.git:
+        repo: "{{ app_repo_url }}"
+        dest: "{{ app_dir }}"
+        version: "{{ app_version }}"
+        force: false
+
+    - name: Render .env file
+      ansible.builtin.template:
+        src: app.env.j2
+        dest: "{{ app_dir }}/.env"
+        mode: "0600"
+
+    - name: Log in to the container registry
+      ansible.builtin.command:
+        cmd: "docker login {{ app_registry }} -u {{ app_registry_user }} --password-stdin"
+        stdin: "{{ app_registry_token }}"
+      no_log: true
+      changed_when: false
+      when: app_registry_token | length > 0
+
+    - name: Start the application
+      ansible.builtin.command:
+        cmd: docker compose up -d --remove-orphans
+        chdir: "{{ app_dir }}"
+      register: app_compose_up
+      changed_when: "'Started' in app_compose_up.stderr or 'Created' in app_compose_up.stderr"

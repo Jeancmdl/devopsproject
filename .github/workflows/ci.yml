@@ -1,0 +1,50 @@
+name: ci
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: gitleaks
+        run: |
+          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.21.2/gitleaks_8.21.2_linux_x64.tar.gz | tar xz gitleaks
+          ./gitleaks detect --source . --config .gitleaks.toml --redact --verbose
+
+  ansible:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: projects/ansible-infra
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -q ansible-core ansible-lint yamllint
+      - run: ansible-galaxy collection install -r requirements.yml -p ./collections
+      - run: yamllint .
+      - run: ansible-lint
+      - run: for p in playbooks/*.yml; do ansible-playbook --syntax-check "$p"; done
+
+  python-and-shell:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -q ruff yamllint
+      - run: ruff check --config projects/semaphore-platform/ruff.toml projects/semaphore-platform/scripts monitoring
+      - run: yamllint -d relaxed projects/semaphore-platform/compose.yml
+      - run: python -m json.tool projects/semaphore-platform/config/semaphore.example.json > /dev/null
+      - run: shellcheck $(git ls-files '*.sh')

@@ -1,0 +1,12 @@
+---
+docker_rootless_user: app
+docker_rootless_repo_url: "https://download.docker.com/linux/rhel/docker-ce.repo"
+docker_rootless_packages:
+  - docker-ce
+  - docker-ce-cli
+  - containerd.io
+  - docker-ce-rootless-extras
+  - docker-compose-plugin
+  - fuse-overlayfs
+  - slirp4netns
+  - shadow-utils

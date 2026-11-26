@@ -1,0 +1,25 @@
+---
+baseline_packages:
+  - vim-enhanced
+  - git
+  - curl
+  - chrony
+  - firewalld
+  - policycoreutils-python-utils
+  - python3-libselinux
+
+# Apply all pending updates ("all"), security errata only ("security") or none ("none").
+baseline_update_mode: security
+
+baseline_selinux_state: enforcing
+baseline_selinux_policy: targeted
+
+baseline_ssh_port: 22
+baseline_ssh_permit_root_login: "no"
+baseline_ssh_password_authentication: "no"
+
+baseline_firewalld_services:
+  - ssh
+
+# List of users: {name, ssh_keys: [], sudo_nopasswd: bool, state: present|absent}
+baseline_users: []

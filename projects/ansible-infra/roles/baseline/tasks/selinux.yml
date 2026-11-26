@@ -1,0 +1,19 @@
+---
+- name: Set SELinux mode
+  ansible.posix.selinux:
+    policy: "{{ baseline_selinux_policy }}"
+    state: "{{ baseline_selinux_state }}"
+  register: baseline_selinux_result
+
+- name: Warn when a reboot is required for SELinux
+  ansible.builtin.debug:
+    msg: "SELinux change requires a reboot on {{ inventory_hostname }}."
+  when: baseline_selinux_result.reboot_required | default(false)
+
+- name: Allow custom SSH port in SELinux
+  community.general.seport:
+    ports: "{{ baseline_ssh_port }}"
+    proto: tcp
+    setype: ssh_port_t
+    state: present
+  when: baseline_ssh_port | int != 22

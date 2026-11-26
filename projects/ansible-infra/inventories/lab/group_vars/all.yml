@@ -1,0 +1,11 @@
+---
+ansible_user: ansible
+ansible_become: true
+
+baseline_users:
+  - name: ansible
+    sudo_nopasswd: true
+    ssh_keys:
+      - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExampleKeyReplaceMe ansible@lab"
+
+docker_rootless_user: app

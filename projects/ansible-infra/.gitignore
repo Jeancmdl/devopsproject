@@ -1,0 +1,6 @@
+collections/
+*.retry
+.vault_pass*
+reports/
+.venv/
+.ansible/

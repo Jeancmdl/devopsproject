@@ -1,0 +1,11 @@
+---
+galaxy_info:
+  role_name: docker_rootless
+  author: Jean Lima
+  description: Rootless Docker for an unprivileged service user on RHEL-family servers
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: EL
+      versions: ["8", "9"]
+dependencies: []

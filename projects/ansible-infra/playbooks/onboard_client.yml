@@ -1,0 +1,9 @@
+---
+# Usage: ansible-playbook playbooks/onboard_client.yml -e client_file=vars/<client>.yml
+- name: Onboard a client application
+  hosts: all
+  become: true
+  vars_files:
+    - "../{{ client_file | default('vars/client.example.yml') }}"
+  roles:
+    - role: app
